@@ -7,6 +7,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -27,6 +29,8 @@ public class Home extends AppCompatActivity {
     private NoteAdapter adapter;
     private RecyclerView.LayoutManager manager;
 
+    private TextView tvEmptyListText;
+    private ImageView ivEmptyList;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -34,51 +38,47 @@ public class Home extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         init();
+        updateEmptyState();
         showAddDialog();
     }
+
     private void showAddDialog() {
         fabAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Dialog addDialog=new Dialog(Home.this);
-                View addNote= LayoutInflater.from(Home.this).inflate(R.layout.add_note_dialog_design,null,false);
+                Dialog addDialog = new Dialog(Home.this);
+                View addNote = LayoutInflater.from(Home.this).inflate(R.layout.add_note_dialog_design, null, false);
 
-                Button btnAdd,btnCancel;
-                btnAdd=addNote.findViewById(R.id.btnAdd);
-                btnCancel=addNote.findViewById(R.id.btnCancel);
+                Button btnAdd, btnCancel;
+                btnAdd = addNote.findViewById(R.id.btnAdd);
+                btnCancel = addNote.findViewById(R.id.btnCancel);
 
-                EditText etTitle,etContent;
-                etTitle=addNote.findViewById(R.id.etTitle);
-                etContent=addNote.findViewById(R.id.etContent);
-
+                EditText etTitle, etContent;
+                etTitle = addNote.findViewById(R.id.etTitle);
+                etContent = addNote.findViewById(R.id.etContent);
 
                 addDialog.setContentView(addNote);
                 addDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-                addDialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+                addDialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 addDialog.show();
-
 
                 btnAdd.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
 
-                        String title=etTitle.getText().toString().trim();
-                        String content=etContent.getText().toString().trim();
+                        String title = etTitle.getText().toString().trim();
+                        String content = etContent.getText().toString().trim();
 
-                        if(title.isEmpty())
-                        {
+                        if (title.isEmpty()) {
                             etTitle.setError(getString(R.string.title_is_required));
-                        }
-                        else if(content.isEmpty())
-                        {
+                        } else if (content.isEmpty()) {
                             etContent.setError(getString(R.string.content_is_required));
-                        }
-                        else
-                        {
-                            notes.add(new Note(title,content,new Date()));
+                        } else {
+                            notes.add(new Note(title, content, new Date()));
                             Toast.makeText(Home.this, R.string.note_added_successfully, Toast.LENGTH_SHORT).show();
                             adapter.notifyDataSetChanged();
+                            updateEmptyState();
                             addDialog.dismiss();
                         }
                     }
@@ -95,16 +95,26 @@ public class Home extends AppCompatActivity {
         });
     }
 
-    private void init()
-    {
-        fabAdd=findViewById(R.id.fabAdd);
-        recyclerView=findViewById(R.id.rvList);
-        notes=new ArrayList<>();
-        recyclerView.setHasFixedSize(true);
-        manager=new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(manager);
-        adapter=new NoteAdapter(this,notes);
-        recyclerView.setAdapter(adapter);
+    private void updateEmptyState() {
+        if (notes.isEmpty()) {
+            tvEmptyListText.setVisibility(View.VISIBLE);
+            ivEmptyList.setVisibility(View.VISIBLE);
+        } else {
+            tvEmptyListText.setVisibility(View.GONE);
+            ivEmptyList.setVisibility(View.GONE);
+        }
     }
 
+    private void init() {
+        tvEmptyListText = findViewById(R.id.tvEmptyListText);
+        ivEmptyList = findViewById(R.id.ivEmptyList);
+        fabAdd = findViewById(R.id.fabAdd);
+        recyclerView = findViewById(R.id.rvList);
+        notes = new ArrayList<>();
+        recyclerView.setHasFixedSize(true);
+        manager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(manager);
+        adapter = new NoteAdapter(this, notes);
+        recyclerView.setAdapter(adapter);
+    }
 }
