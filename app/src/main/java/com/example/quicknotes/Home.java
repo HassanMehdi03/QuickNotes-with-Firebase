@@ -11,24 +11,32 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.firebase.ui.database.FirebaseRecyclerOptions;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
 
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 
 public class Home extends AppCompatActivity {
 
     private FloatingActionButton fabAdd;
     private RecyclerView recyclerView;
-    private ArrayList<Note> notes;
     private NoteAdapter adapter;
-    private RecyclerView.LayoutManager manager;
-
     private TextView tvEmptyListText;
     private ImageView ivEmptyList;
 
@@ -38,25 +46,42 @@ public class Home extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         init();
+        setupRecyclerView();
         updateEmptyState();
         showAddDialog();
+    }
+
+    private void init() {
+        tvEmptyListText = findViewById(R.id.tvEmptyListText);
+        ivEmptyList = findViewById(R.id.ivEmptyList);
+        fabAdd = findViewById(R.id.fabAdd);
+        recyclerView = findViewById(R.id.rvList);
+    }
+
+    private void setupRecyclerView() {
+        DatabaseReference notesRef = FirebaseDatabase.getInstance().getReference().child("Notes");
+
+        FirebaseRecyclerOptions<Note> options = new FirebaseRecyclerOptions.Builder<Note>()
+                .setQuery(notesRef, Note.class)
+                .build();
+
+        adapter = new NoteAdapter(options);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(adapter);
     }
 
     private void showAddDialog() {
         fabAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Dialog addDialog = new Dialog(Home.this);
                 View addNote = LayoutInflater.from(Home.this).inflate(R.layout.add_note_dialog_design, null, false);
 
-                Button btnAdd, btnCancel;
-                btnAdd = addNote.findViewById(R.id.btnAdd);
-                btnCancel = addNote.findViewById(R.id.btnCancel);
-
-                EditText etTitle, etContent;
-                etTitle = addNote.findViewById(R.id.etTitle);
-                etContent = addNote.findViewById(R.id.etContent);
+                Button btnAdd = addNote.findViewById(R.id.btnAdd);
+                Button btnCancel = addNote.findViewById(R.id.btnCancel);
+                EditText etTitle = addNote.findViewById(R.id.etTitle);
+                EditText etContent = addNote.findViewById(R.id.etContent);
 
                 addDialog.setContentView(addNote);
                 addDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
@@ -66,7 +91,6 @@ public class Home extends AppCompatActivity {
                 btnAdd.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-
                         String title = etTitle.getText().toString().trim();
                         String content = etContent.getText().toString().trim();
 
@@ -75,11 +99,32 @@ public class Home extends AppCompatActivity {
                         } else if (content.isEmpty()) {
                             etContent.setError(getString(R.string.content_is_required));
                         } else {
-                            notes.add(new Note(title, content, new Date()));
-                            Toast.makeText(Home.this, R.string.note_added_successfully, Toast.LENGTH_SHORT).show();
-                            adapter.notifyDataSetChanged();
-                            updateEmptyState();
-                            addDialog.dismiss();
+                            HashMap<String, Object> data = new HashMap<>();
+                            data.put("title", title);
+                            data.put("content", content);
+
+                            SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+                            String date = formatter.format(new Date());
+                            data.put("date", date);
+
+                            FirebaseDatabase.getInstance().getReference()
+                                    .child("Notes")
+                                    .push()
+                                    .setValue(data)
+                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                        @Override
+                                        public void onSuccess(Void unused) {
+                                            Toast.makeText(Home.this, R.string.note_added_successfully, Toast.LENGTH_SHORT).show();
+                                            updateEmptyState();
+                                            addDialog.dismiss();
+                                        }
+                                    }).addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            Toast.makeText(Home.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                                            addDialog.dismiss();
+                                        }
+                                    });
                         }
                     }
                 });
@@ -90,31 +135,40 @@ public class Home extends AppCompatActivity {
                         addDialog.dismiss();
                     }
                 });
-
             }
         });
     }
 
     private void updateEmptyState() {
-        if (notes.isEmpty()) {
-            tvEmptyListText.setVisibility(View.VISIBLE);
-            ivEmptyList.setVisibility(View.VISIBLE);
-        } else {
-            tvEmptyListText.setVisibility(View.GONE);
-            ivEmptyList.setVisibility(View.GONE);
-        }
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child("Notes");
+        ref.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists() || !snapshot.hasChildren()) {
+                    tvEmptyListText.setVisibility(View.VISIBLE);
+                    ivEmptyList.setVisibility(View.VISIBLE);
+                } else {
+                    tvEmptyListText.setVisibility(View.GONE);
+                    ivEmptyList.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Handle possible errors.
+            }
+        });
     }
 
-    private void init() {
-        tvEmptyListText = findViewById(R.id.tvEmptyListText);
-        ivEmptyList = findViewById(R.id.ivEmptyList);
-        fabAdd = findViewById(R.id.fabAdd);
-        recyclerView = findViewById(R.id.rvList);
-        notes = new ArrayList<>();
-        recyclerView.setHasFixedSize(true);
-        manager = new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(manager);
-        adapter = new NoteAdapter(this, notes);
-        recyclerView.setAdapter(adapter);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        adapter.startListening();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        adapter.stopListening();
     }
 }
