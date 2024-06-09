@@ -1,16 +1,15 @@
 package com.example.quicknotes;
 
-import java.util.Date;
+public class Note {
+    private String title;
+    private String content;
+    private String date;
 
-public class Note
-{
-    private String title, content;
-    private Date date;
-
+    // Default constructor required for calls to DataSnapshot.getValue(Note.class)
     public Note() {
     }
 
-    public Note(String title, String content, Date date) {
+    public Note(String title, String content, String date) {
         this.title = title;
         this.content = content;
         this.date = date;
@@ -32,11 +31,11 @@ public class Note
         this.content = content;
     }
 
-    public Date getDate() {
+    public String getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(String date) {
         this.date = date;
     }
 }

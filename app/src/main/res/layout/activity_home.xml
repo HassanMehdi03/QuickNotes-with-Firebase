@@ -38,6 +38,7 @@
         android:layout_alignParentEnd="true"
         android:layout_margin="45dp"
         android:backgroundTint="@color/floating_btn_color"
-        android:src="@drawable/ic_add" />
+        android:src="@drawable/ic_add"
+        />
 
 </RelativeLayout>
